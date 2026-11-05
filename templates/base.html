@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title %}FORENSIC LAB{% endblock %}</title>
+
+    <meta name="description"
+          content="FORENSIC LAB - Digital investigation and forensic analysis platform">
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<header class="navbar">
+
+    <a href="/" class="logo">
+        <span class="logo-icon">F</span>
+        FORENSIC LAB
+    </a>
+
+    <nav class="nav-links">
+        <a href="/" data-translate="home">Home</a>
+        <a href="/dashboard" data-translate="dashboard">Dashboard</a>
+        <a href="/analyze" data-translate="analyze">Analyze</a>
+        <a href="/admin">Admin</a>
+    </nav>
+
+    <div class="nav-actions">
+
+        <select id="language-selector">
+            <option value="en">English</option>
+            <option value="sw">Kiswahili</option>
+        </select>
+
+        <button id="logout-button" class="btn btn-outline">
+            Logout
+        </button>
+
+    </div>
+
+</header>
+
+<main class="main-container">
+
+    {% block content %}{% endblock %}
+
+</main>
+
+<footer class="footer">
+
+    <p>© 2026 FORENSIC LAB. All rights reserved.</p>
+
+    <p>
+        Responsible digital investigation platform.
+    </p>
+
+</footer>
+
+<div id="message-box" class="message" style="display:none"></div>
+
+<script type="module"
+        src="{{ url_for('static', filename='app.js') }}">
+</script>
+
+{% block scripts %}{% endblock %}
+
+</body>
+</html>
