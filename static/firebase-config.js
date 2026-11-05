@@ -3,7 +3,7 @@ import { initializeApp } from
 
 import {
     initializeAuth,
-    inMemoryPersistence,
+    browserSessionPersistence,
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signOut,
@@ -40,9 +40,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Login haitahifadhiwa baada ya refresh
+// Session inafanya kazi ndani ya tab ya browser.
 const auth = initializeAuth(app, {
-    persistence: inMemoryPersistence
+    persistence: browserSessionPersistence
 });
 
 const database = getDatabase(app);
@@ -51,6 +51,7 @@ export {
     app,
     auth,
     database,
+
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signOut,
@@ -58,6 +59,7 @@ export {
     updateProfile,
     sendPasswordResetEmail,
     sendEmailVerification,
+
     ref,
     set,
     get,
