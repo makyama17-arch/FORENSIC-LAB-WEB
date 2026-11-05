@@ -33,16 +33,17 @@ from PIL import (
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import (
+    getSampleStyleSheet,
+    ParagraphStyle
+)
 from reportlab.lib.units import mm
 from reportlab.platypus import (
     SimpleDocTemplate,
     Paragraph,
     Spacer,
     Table,
-    TableStyle,
-    PageBreak,
-    KeepTogether
+    TableStyle
 )
 from reportlab.lib.enums import TA_CENTER
 from xml.sax.saxutils import escape
@@ -224,6 +225,9 @@ def require_auth(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
 
+        # Authentication is checked separately
+        # so route errors are not mistaken for auth errors.
+
         try:
 
             decoded = get_token_user()
@@ -239,8 +243,6 @@ def require_auth(function):
                 }), 403
 
             request.current_user = decoded
-
-            return function(*args, **kwargs)
 
         except PermissionError as error:
 
@@ -263,6 +265,10 @@ def require_auth(function):
             return jsonify({
                 "error": "Authentication failed."
             }), 401
+
+        # Execute the actual route outside auth try block.
+
+        return function(*args, **kwargs)
 
     return wrapper
 
@@ -320,10 +326,15 @@ def calculate_hashes(file_path):
             md5.update(chunk)
 
     return {
+
         "file_size": file_size,
+
         "sha256": sha256.hexdigest(),
+
         "sha1": sha1.hexdigest(),
+
         "md5": md5.hexdigest()
+
     }
 
 
@@ -380,7 +391,9 @@ def gps_to_decimal(coordinate, reference):
     try:
 
         degrees = float(coordinate[0])
+
         minutes = float(coordinate[1])
+
         seconds = float(coordinate[2])
 
         decimal = (
@@ -389,7 +402,7 @@ def gps_to_decimal(coordinate, reference):
             seconds / 3600
         )
 
-        if reference in ("S", "W"):
+        if str(reference).upper() in ("S", "W"):
 
             decimal = -decimal
 
@@ -402,19 +415,29 @@ def gps_to_decimal(coordinate, reference):
 
 def extract_gps(exif):
 
-    gps_data = exif.get(34853)
-
-    if not gps_data:
-        return None
-
     try:
+
+        # Modern Pillow GPS extraction.
+
+        try:
+
+            gps_data = exif.get_ifd(34853)
+
+        except Exception:
+
+            gps_data = exif.get(34853)
+
+        if not gps_data:
+
+            return None
 
         gps = {}
 
         for key, value in gps_data.items():
 
             tag_name = ExifTags.GPSTAGS.get(
-                key, str(key)
+                key,
+                str(key)
             )
 
             gps[tag_name] = value
@@ -432,24 +455,36 @@ def extract_gps(exif):
         if latitude is None or longitude is None:
 
             return {
+
                 "available": True,
+
                 "raw_metadata": {
                     str(key): safe_value(value)
                     for key, value in gps.items()
                 }
+
             }
 
         return {
+
             "available": True,
+
             "latitude": latitude,
+
             "longitude": longitude
+
         }
 
     except Exception:
 
         return {
+
             "available": True,
-            "message": "GPS metadata exists but could not be interpreted."
+
+            "message": (
+                "GPS metadata exists but could not be interpreted."
+            )
+
         }
 
 
@@ -460,11 +495,19 @@ def extract_gps(exif):
 def analyze_image(file_path):
 
     result = {
+
         "is_image": False,
+
         "image_analysis": {},
+
         "exif_metadata": {},
+
+        "gps_metadata": None,
+
         "findings": [],
+
         "warnings": []
+
     }
 
     try:
@@ -486,7 +529,8 @@ def analyze_image(file_path):
             for tag_id, value in exif.items():
 
                 tag_name = ExifTags.TAGS.get(
-                    tag_id, str(tag_id)
+                    tag_id,
+                    str(tag_id)
                 )
 
                 exif_data[tag_name] = safe_value(value)
@@ -524,13 +568,19 @@ def analyze_image(file_path):
 
             }
 
+            # Compression identification
+
             if image_format == "JPEG":
 
-                image_analysis["compression"] = "JPEG lossy compression"
+                image_analysis["compression"] = (
+                    "JPEG lossy compression"
+                )
 
             elif image_format == "PNG":
 
-                image_analysis["compression"] = "PNG compression"
+                image_analysis["compression"] = (
+                    "PNG compression"
+                )
 
             elif image_format == "WEBP":
 
@@ -538,7 +588,9 @@ def analyze_image(file_path):
 
             else:
 
-                image_analysis["compression"] = "Not determined"
+                image_analysis["compression"] = (
+                    "Not determined"
+                )
 
             result["image_analysis"] = image_analysis
 
@@ -548,46 +600,71 @@ def analyze_image(file_path):
 
             findings = []
 
+            # IMAGE DIMENSIONS
+
             if width <= 0 or height <= 0:
 
                 findings.append({
+
                     "severity": "Warning",
+
                     "title": "Invalid image dimensions",
-                    "description": "The image dimensions are invalid."
+
+                    "description": (
+                        "The image dimensions are invalid."
+                    )
+
                 })
 
             else:
 
                 findings.append({
+
                     "severity": "Information",
+
                     "title": "Image dimensions identified",
+
                     "description": (
                         f"The image dimensions are "
                         f"{width} x {height} pixels."
                     )
+
                 })
+
+            # EXIF METADATA
 
             if exif_data:
 
                 findings.append({
+
                     "severity": "Information",
+
                     "title": "EXIF metadata detected",
+
                     "description": (
                         f"{len(exif_data)} EXIF metadata "
                         "fields were identified."
-                    })
+                    )
+
+                })
 
             else:
 
                 findings.append({
+
                     "severity": "Information",
+
                     "title": "EXIF metadata unavailable",
+
                     "description": (
                         "No standard EXIF fields were detected. "
                         "Metadata may have been removed or the "
                         "image format may not contain EXIF data."
                     )
+
                 })
+
+            # SOFTWARE INFORMATION
 
             software = (
                 exif_data.get("Software")
@@ -597,32 +674,46 @@ def analyze_image(file_path):
             if software:
 
                 findings.append({
+
                     "severity": "Review",
+
                     "title": "Software metadata identified",
+
                     "description": (
                         "Software information was found: "
                         + str(software)
                     )
+
                 })
+
+            # GPS INFORMATION
 
             if gps and gps.get("available"):
 
                 findings.append({
+
                     "severity": "Information",
+
                     "title": "GPS metadata detected",
+
                     "description": (
                         "The image contains GPS-related metadata."
                     )
+
                 })
 
             else:
 
                 findings.append({
+
                     "severity": "Information",
+
                     "title": "GPS metadata unavailable",
+
                     "description": (
                         "No interpretable GPS metadata was detected."
                     )
+
                 })
 
             result["findings"] = findings
@@ -684,11 +775,13 @@ def build_forensic_report(
     )
 
     findings = image_result.get(
-        "findings", []
+        "findings",
+        []
     )
 
     warnings = image_result.get(
-        "warnings", []
+        "warnings",
+        []
     )
 
     if image_result.get("is_image"):
@@ -730,21 +823,27 @@ def build_forensic_report(
         "file_size": file_size,
 
         "file_size_mb": round(
-            file_size / (1024 * 1024), 3
+            file_size / (1024 * 1024),
+            3
         ),
 
         "hashes": hashes,
 
         "analysis_type": analysis_type,
 
-        "is_image": image_result.get("is_image", False),
+        "is_image": image_result.get(
+            "is_image",
+            False
+        ),
 
         "image_analysis": image_result.get(
-            "image_analysis", {}
+            "image_analysis",
+            {}
         ),
 
         "exif_metadata": image_result.get(
-            "exif_metadata", {}
+            "exif_metadata",
+            {}
         ),
 
         "gps_metadata": image_result.get(
@@ -786,44 +885,71 @@ def make_pdf_styles():
 
     styles.add(
         ParagraphStyle(
+
             name="ReportTitle",
+
             parent=styles["Title"],
+
             fontSize=22,
+
             leading=28,
+
             alignment=TA_CENTER,
+
             textColor=colors.HexColor("#123456"),
+
             spaceAfter=12
+
         )
     )
 
     styles.add(
         ParagraphStyle(
+
             name="SectionHeading",
+
             parent=styles["Heading2"],
+
             fontSize=13,
+
             leading=17,
+
             textColor=colors.HexColor("#123456"),
+
             spaceBefore=12,
+
             spaceAfter=7
+
         )
     )
 
     styles.add(
         ParagraphStyle(
+
             name="ReportText",
+
             parent=styles["BodyText"],
+
             fontSize=8.5,
+
             leading=12,
+
             spaceAfter=4
+
         )
     )
 
     styles.add(
         ParagraphStyle(
+
             name="SmallReportText",
+
             parent=styles["BodyText"],
+
             fontSize=7,
+
             leading=10
+
         )
     )
 
@@ -837,9 +963,15 @@ def make_pdf_styles():
 def pdf_table(rows, col_widths=None):
 
     table = Table(
+
         rows,
+
         colWidths=col_widths,
-        repeatRows=1
+
+        repeatRows=1,
+
+        splitByRow=1
+
     )
 
     table.setStyle(
@@ -954,7 +1086,7 @@ def generate_pdf(report):
 
         story.append(
             Paragraph(
-                escape(text),
+                escape(str(text)),
                 styles["SectionHeading"]
             )
         )
@@ -971,8 +1103,11 @@ def generate_pdf(report):
     def table_value(value):
 
         return Paragraph(
+
             escape(str(value)),
+
             styles["SmallReportText"]
+
         )
 
     # COVER
@@ -1018,86 +1153,118 @@ def generate_pdf(report):
 
         ["Field", "Value"],
 
-        ["Case ID", report["case_id"]],
+        ["Case ID", report.get("case_id", "N/A")],
 
-        ["Evidence ID", report["evidence_id"]],
+        ["Evidence ID", report.get("evidence_id", "N/A")],
 
-        ["Examiner", report["examiner"]],
+        ["Examiner", report.get("examiner", "N/A")],
 
-        ["Analysis Date", report["analysis_date"]],
+        ["Analysis Date", report.get("analysis_date", "N/A")],
 
-        ["Analysis Type", report["analysis_type"]]
+        ["Analysis Type", report.get("analysis_type", "N/A")]
 
     ]
 
     story.append(
-        pdf_table(rows, [55 * mm, 110 * mm])
+        pdf_table(
+            rows,
+            [55 * mm, 110 * mm]
+        )
     )
 
     # FILE IDENTIFICATION
 
     heading("2. FILE IDENTIFICATION")
 
+    hashes = report.get("hashes", {})
+
     rows = [
 
         ["Field", "Value"],
 
-        ["Filename", report["filename"]],
+        ["Filename", report.get("filename", "N/A")],
 
-        ["MIME Type", report["mime_type"]],
+        ["MIME Type", report.get("mime_type", "N/A")],
 
-        ["File Size", f'{report["file_size"]} bytes'],
+        [
+            "File Size",
+            f'{report.get("file_size", 0)} bytes'
+        ],
 
-        ["File Size MB", report["file_size_mb"]],
+        [
+            "File Size MB",
+            report.get("file_size_mb", "N/A")
+        ],
 
-        ["SHA-256", report["hashes"]["sha256"]],
+        ["SHA-256", hashes.get("sha256", "N/A")],
 
-        ["SHA-1", report["hashes"]["sha1"]],
+        ["SHA-1", hashes.get("sha1", "N/A")],
 
-        ["MD5", report["hashes"]["md5"]]
+        ["MD5", hashes.get("md5", "N/A")]
 
     ]
 
     story.append(
-        pdf_table(rows, [55 * mm, 110 * mm])
+        pdf_table(
+            rows,
+            [55 * mm, 110 * mm]
+        )
     )
 
     # IMAGE ANALYSIS
 
     heading("3. IMAGE TECHNICAL ANALYSIS")
 
-    if report["is_image"]:
+    if report.get("is_image"):
 
-        image = report["image_analysis"]
+        image_data = report.get(
+            "image_analysis",
+            {}
+        )
 
         rows = [
 
             ["Property", "Result"],
 
-            ["Format", image.get("format", "Unavailable")],
+            ["Format", image_data.get("format", "Unavailable")],
 
-            ["Width", image.get("width", "Unavailable")],
+            ["Width", image_data.get("width", "Unavailable")],
 
-            ["Height", image.get("height", "Unavailable")],
+            ["Height", image_data.get("height", "Unavailable")],
 
-            ["Resolution", image.get("resolution", "Unavailable")],
+            ["Resolution", image_data.get("resolution", "Unavailable")],
 
-            ["Color Mode", image.get("color_mode", "Unavailable")],
+            ["Color Mode", image_data.get("color_mode", "Unavailable")],
 
-            ["Bands", image.get("bands", "Unavailable")],
+            ["Bands", image_data.get("bands", "Unavailable")],
 
-            ["Transparency", image.get("has_transparency", "Unavailable")],
+            [
+                "Transparency",
+                image_data.get("has_transparency", "Unavailable")
+            ],
 
-            ["Compression", image.get("compression", "Unavailable")],
+            [
+                "Compression",
+                image_data.get("compression", "Unavailable")
+            ],
 
-            ["ICC Profile", image.get("icc_profile_present", False)],
+            [
+                "ICC Profile",
+                image_data.get("icc_profile_present", False)
+            ],
 
-            ["EXIF Present", image.get("exif_present", False)]
+            [
+                "EXIF Present",
+                image_data.get("exif_present", False)
+            ]
 
         ]
 
         story.append(
-            pdf_table(rows, [55 * mm, 110 * mm])
+            pdf_table(
+                rows,
+                [55 * mm, 110 * mm]
+            )
         )
 
     else:
@@ -1112,7 +1279,8 @@ def generate_pdf(report):
     heading("4. EXIF METADATA")
 
     exif = report.get(
-        "exif_metadata", {}
+        "exif_metadata",
+        {}
     )
 
     if exif:
@@ -1124,12 +1292,18 @@ def generate_pdf(report):
         for key, value in exif.items():
 
             rows.append([
+
                 table_value(key),
-                table_value(str(value))
+
+                table_value(value)
+
             ])
 
         story.append(
-            pdf_table(rows, [55 * mm, 110 * mm])
+            pdf_table(
+                rows,
+                [55 * mm, 110 * mm]
+            )
         )
 
     else:
@@ -1165,6 +1339,13 @@ def generate_pdf(report):
                 )
             )
 
+            if gps.get("raw_metadata"):
+
+                paragraph(
+                    "Raw GPS metadata: "
+                    + str(gps["raw_metadata"])
+                )
+
     else:
 
         paragraph(
@@ -1188,7 +1369,10 @@ def generate_pdf(report):
             rows.append([
 
                 table_value(
-                    finding.get("severity", "Information")
+                    finding.get(
+                        "severity",
+                        "Information"
+                    )
                 ),
 
                 table_value(
@@ -1220,14 +1404,17 @@ def generate_pdf(report):
 
     for warning in report.get("warnings", []):
 
-        paragraph("• " + warning)
+        paragraph("- " + warning)
 
     # CONCLUSION
 
     heading("8. EXAMINER'S CONCLUSION")
 
     paragraph(
-        report["conclusion"]
+        report.get(
+            "conclusion",
+            "No conclusion available."
+        )
     )
 
     # LIMITATIONS
@@ -1236,7 +1423,7 @@ def generate_pdf(report):
 
     for limitation in report.get("limitations", []):
 
-        paragraph("• " + limitation)
+        paragraph("- " + limitation)
 
     # FINAL NOTICE
 
@@ -1282,9 +1469,13 @@ def generate_pdf(report):
         canvas.restoreState()
 
     document.build(
+
         story,
+
         onFirstPage=add_page_number,
+
         onLaterPages=add_page_number
+
     )
 
     buffer.seek(0)
@@ -1410,8 +1601,11 @@ def sync_user():
             })
 
     return jsonify({
+
         "success": True,
+
         "uid": uid
+
     })
 
 
@@ -1451,7 +1645,9 @@ def activity():
     uid = request.current_user["uid"]
 
     save_user(uid, {
+
         "last_seen": current_time()
+
     })
 
     return jsonify({
@@ -1495,7 +1691,7 @@ def analyze_file():
 
     try:
 
-        # Store temporary upload securely
+        # Store temporary upload securely.
 
         with tempfile.NamedTemporaryFile(
             delete=False
@@ -1507,19 +1703,25 @@ def analyze_file():
                 temporary_file
             )
 
-        # Calculate cryptographic hashes
+        # Calculate hashes.
 
         hashes = calculate_hashes(
             temporary_path
         )
 
-        # Examine image metadata
+        if hashes["file_size"] == 0:
+
+            return jsonify({
+                "error": "The uploaded file is empty."
+            }), 400
+
+        # Examine image metadata.
 
         image_result = analyze_image(
             temporary_path
         )
 
-        # Generate case and evidence identifiers
+        # Generate identifiers.
 
         case_id = generate_case_id()
 
@@ -1535,7 +1737,7 @@ def analyze_file():
             or "Unknown Examiner"
         )
 
-        # Build forensic report
+        # Build report.
 
         report = build_forensic_report(
 
@@ -1553,7 +1755,7 @@ def analyze_file():
 
         )
 
-        # Store report metadata in Firebase
+        # Store report metadata in Firebase.
 
         history_reference = db.reference(
             f"history/{uid}"
@@ -1651,11 +1853,11 @@ def analyze_file():
 
 @app.route("/api/report/<report_id>")
 @require_auth
-def download_report():
+def download_report(report_id):
 
     uid = request.current_user["uid"]
 
-    report_id = request.view_args["report_id"]
+    # User can access reports belonging to their UID only.
 
     report = db.reference(
         f"history/{uid}/{report_id}"
@@ -1664,7 +1866,9 @@ def download_report():
     if not report:
 
         return jsonify({
+
             "error": "Forensic report not found."
+
         }), 404
 
     try:
@@ -1674,7 +1878,8 @@ def download_report():
         )
 
         filename = (
-            f"FORENSIC_REPORT_{report.get('case_id', report_id)}.pdf"
+            f"FORENSIC_REPORT_"
+            f"{report.get('case_id', report_id)}.pdf"
         )
 
         return send_file(
@@ -1696,7 +1901,9 @@ def download_report():
         )
 
         return jsonify({
+
             "error": "Unable to generate PDF report."
+
         }), 500
 
 
@@ -1718,14 +1925,20 @@ def history():
 
     for record_id, record in records.items():
 
-        record["id"] = record_id
+        if not isinstance(record, dict):
+            continue
 
-        history_items.append(record)
+        item = dict(record)
+
+        item["id"] = record_id
+
+        history_items.append(item)
 
     history_items.sort(
 
         key=lambda item: item.get(
-            "created_at", 0
+            "created_at",
+            0
         ),
 
         reverse=True
@@ -1733,7 +1946,9 @@ def history():
     )
 
     return jsonify({
+
         "history": history_items
+
     })
 
 
@@ -1753,6 +1968,9 @@ def public_ads():
 
     for ad_id, ad in records.items():
 
+        if not isinstance(ad, dict):
+            continue
+
         if ad.get("active"):
 
             active_ads.append({
@@ -1768,7 +1986,9 @@ def public_ads():
             })
 
     return jsonify({
+
         "ads": active_ads
+
     })
 
 
@@ -1802,12 +2022,17 @@ def admin_stats():
 
     for user in users.values():
 
+        if not isinstance(user, dict):
+            continue
+
         last_seen = user.get(
-            "last_seen", 0
+            "last_seen",
+            0
         )
 
         created_at = user.get(
-            "created_at", 0
+            "created_at",
+            0
         )
 
         if now - last_seen <= five_minutes:
@@ -1820,7 +2045,7 @@ def admin_stats():
 
     for ad in ads.values():
 
-        if ad.get("active"):
+        if isinstance(ad, dict) and ad.get("active"):
 
             active_ads += 1
 
@@ -1853,6 +2078,9 @@ def admin_users():
 
     for uid, user in users.items():
 
+        if not isinstance(user, dict):
+            continue
+
         result.append({
 
             "uid": uid,
@@ -1862,15 +2090,18 @@ def admin_users():
             "email": user.get("email", ""),
 
             "suspended": user.get(
-                "suspended", False
+                "suspended",
+                False
             ),
 
             "created_at": user.get(
-                "created_at", 0
+                "created_at",
+                0
             ),
 
             "last_seen": user.get(
-                "last_seen", 0
+                "last_seen",
+                0
             )
 
         })
@@ -1878,7 +2109,8 @@ def admin_users():
     result.sort(
 
         key=lambda item: item.get(
-            "created_at", 0
+            "created_at",
+            0
         ),
 
         reverse=True
@@ -1886,7 +2118,9 @@ def admin_users():
     )
 
     return jsonify({
+
         "users": result
+
     })
 
 
@@ -1900,7 +2134,11 @@ def suspend_user(uid):
     if uid == ADMIN_UID:
 
         return jsonify({
-            "error": "You cannot suspend the main administrator."
+
+            "error": (
+                "You cannot suspend the main administrator."
+            )
+
         }), 400
 
     reference = user_reference(uid)
@@ -1910,16 +2148,23 @@ def suspend_user(uid):
     if not user:
 
         return jsonify({
+
             "error": "User not found."
+
         }), 404
 
     reference.update({
+
         "suspended": True
+
     })
 
     return jsonify({
+
         "success": True,
+
         "message": "User suspended."
+
     })
 
 
@@ -1937,16 +2182,23 @@ def activate_user(uid):
     if not user:
 
         return jsonify({
+
             "error": "User not found."
+
         }), 404
 
     reference.update({
+
         "suspended": False
+
     })
 
     return jsonify({
+
         "success": True,
+
         "message": "User activated."
+
     })
 
 
@@ -1966,6 +2218,9 @@ def admin_ads():
 
     for ad_id, ad in records.items():
 
+        if not isinstance(ad, dict):
+            continue
+
         result.append({
 
             "id": ad_id,
@@ -1977,11 +2232,13 @@ def admin_ads():
             "url": ad.get("url", ""),
 
             "active": ad.get(
-                "active", False
+                "active",
+                False
             ),
 
             "created_at": ad.get(
-                "created_at", 0
+                "created_at",
+                0
             )
 
         })
@@ -1989,7 +2246,8 @@ def admin_ads():
     result.sort(
 
         key=lambda item: item.get(
-            "created_at", 0
+            "created_at",
+            0
         ),
 
         reverse=True
@@ -1997,7 +2255,9 @@ def admin_ads():
     )
 
     return jsonify({
+
         "ads": result
+
     })
 
 
@@ -2027,13 +2287,17 @@ def create_ad():
     if not title or not text:
 
         return jsonify({
+
             "error": "Title and text are required."
+
         }), 400
 
     if len(title) > 120 or len(text) > 2000:
 
         return jsonify({
+
             "error": "Title or text is too long."
+
         }), 400
 
     if url:
@@ -2041,17 +2305,24 @@ def create_ad():
         parsed = urlparse(url)
 
         if parsed.scheme not in (
-            "http", "https"
+            "http",
+            "https"
         ):
 
             return jsonify({
-                "error": "Only HTTP and HTTPS links are allowed."
+
+                "error": (
+                    "Only HTTP and HTTPS links are allowed."
+                )
+
             }), 400
 
         if not parsed.netloc:
 
             return jsonify({
+
                 "error": "Invalid URL."
+
             }), 400
 
     reference = db.reference(
@@ -2097,19 +2368,24 @@ def toggle_ad(ad_id):
     if not ad:
 
         return jsonify({
+
             "error": "Advertisement not found."
+
         }), 404
 
     reference.update({
 
         "active": not ad.get(
-            "active", False
+            "active",
+            False
         )
 
     })
 
     return jsonify({
+
         "success": True
+
     })
 
 
@@ -2127,13 +2403,17 @@ def delete_ad(ad_id):
     if not reference.get():
 
         return jsonify({
+
             "error": "Advertisement not found."
+
         }), 404
 
     reference.delete()
 
     return jsonify({
+
         "success": True
+
     })
 
 
@@ -2160,7 +2440,9 @@ def not_found(error):
     if request.path.startswith("/api/"):
 
         return jsonify({
+
             "error": "API endpoint not found."
+
         }), 404
 
     return "Page not found.", 404
@@ -2176,7 +2458,11 @@ def internal_error(error):
     if request.path.startswith("/api/"):
 
         return jsonify({
-            "error": "An internal server error occurred."
+
+            "error": (
+                "An internal server error occurred."
+            )
+
         }), 500
 
     return "An internal server error occurred.", 500
@@ -2198,4 +2484,4 @@ if __name__ == "__main__":
 
         debug=False
 
-    )
+            )
