@@ -175,6 +175,8 @@ def require_auth(function):
             return jsonify({"error": str(error)}), 503
 
         except Exception:
+            app.logger.exception("Authentication failed.")
+
             return jsonify({
                 "error": "Authentication failed."
             }), 401
@@ -216,7 +218,26 @@ def home():
 
 @app.route("/auth")
 def authentication():
-    return render_template("auth.html")
+    return render_template(
+        "auth.html",
+        open_register=False
+    )
+
+
+@app.route("/register")
+def register():
+    return render_template(
+        "auth.html",
+        open_register=True
+    )
+
+
+@app.route("/create-account")
+def create_account():
+    return render_template(
+        "auth.html",
+        open_register=True
+    )
 
 
 @app.route("/dashboard")
@@ -739,7 +760,10 @@ def delete_ad(ad_id):
 def file_too_large(error):
 
     return jsonify({
-        "error": f"File is too large. Maximum size is {MAX_UPLOAD_MB} MB."
+        "error": (
+            f"File is too large. "
+            f"Maximum size is {MAX_UPLOAD_MB} MB."
+        )
     }), 413
 
 
