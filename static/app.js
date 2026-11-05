@@ -1,5 +1,6 @@
 // ============================================
 // FORENSIC LAB - MAIN JAVASCRIPT
+// FULL FORENSIC REPORT VERSION
 // ============================================
 
 import {
@@ -11,70 +12,39 @@ import {
     updateProfile
 } from "./firebase-config.js";
 
-// --------------------------------------------
+
+// ============================================
 // GLOBAL HELPERS
-// --------------------------------------------
+// ============================================
 
 const $ = (id) => document.getElementById(id);
 
 const ADMIN_UID = "sNQN4CLKeIhdHUeXbMqfW0gOpg62";
 
 function showMessage(message, type = "info") {
+
     const box = $("message-box");
 
     if (box) {
+
         box.textContent = message;
         box.className = `message-box ${type}`;
         box.style.display = "block";
+
     } else {
+
         alert(message);
+
     }
 }
 
 function hideMessage() {
+
     const box = $("message-box");
 
     if (box) {
         box.style.display = "none";
     }
-}
-
-async function apiRequest(url, options = {}) {
-
-    const user = auth.currentUser;
-
-    if (!user) {
-        throw new Error("Please login first.");
-    }
-
-    const token = await user.getIdToken();
-
-    const headers = {
-        ...(options.headers || {}),
-        Authorization: `Bearer ${token}`
-    };
-
-    if (
-        options.body &&
-        !(options.body instanceof FormData)
-    ) {
-        headers["Content-Type"] = "application/json";
-    }
-
-    const response = await fetch(url, {
-        ...options,
-        headers
-    });
-
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-        throw new Error(
-            data.error || `Request failed (${response.status}).`
-        );
-    }
-
-    return data;
 }
 
 function createElement(tag, className, text) {
@@ -99,9 +69,149 @@ function formatDate(timestamp) {
     return new Date(timestamp).toLocaleString();
 }
 
-// --------------------------------------------
+function formatBytes(bytes) {
+
+    if (!Number.isFinite(Number(bytes))) {
+        return "N/A";
+    }
+
+    const units = ["Bytes", "KB", "MB", "GB"];
+
+    let size = Number(bytes);
+    let index = 0;
+
+    while (size >= 1024 && index < units.length - 1) {
+
+        size /= 1024;
+        index++;
+
+    }
+
+    return `${size.toFixed(2)} ${units[index]}`;
+}
+
+
+// ============================================
+// API REQUEST
+// ============================================
+
+async function apiRequest(url, options = {}) {
+
+    const user = auth.currentUser;
+
+    if (!user) {
+        throw new Error("Please login first.");
+    }
+
+    const token = await user.getIdToken();
+
+    const headers = {
+        ...(options.headers || {}),
+        Authorization: `Bearer ${token}`
+    };
+
+    if (
+        options.body &&
+        !(options.body instanceof FormData)
+    ) {
+
+        headers["Content-Type"] = "application/json";
+
+    }
+
+    const response = await fetch(url, {
+        ...options,
+        headers
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+
+        throw new Error(
+            data.error || `Request failed (${response.status}).`
+        );
+
+    }
+
+    return data;
+}
+
+
+// ============================================
+// AUTHENTICATED PDF DOWNLOAD
+// ============================================
+
+async function downloadForensicReport(reportUrl, button) {
+
+    const user = auth.currentUser;
+
+    if (!user) {
+        throw new Error("Please login first.");
+    }
+
+    const originalText = button.textContent;
+
+    button.disabled = true;
+    button.textContent = "Preparing PDF...";
+
+    try {
+
+        const token = await user.getIdToken();
+
+        const response = await fetch(reportUrl, {
+
+            method: "GET",
+
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+
+        });
+
+        if (!response.ok) {
+
+            const errorData = await response.json().catch(() => ({}));
+
+            throw new Error(
+                errorData.error || "PDF download failed."
+            );
+
+        }
+
+        const blob = await response.blob();
+
+        const downloadUrl = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+
+        link.href = downloadUrl;
+
+        link.download = "FORENSIC_LAB_REPORT.pdf";
+
+        document.body.appendChild(link);
+
+        link.click();
+
+        link.remove();
+
+        setTimeout(() => {
+            URL.revokeObjectURL(downloadUrl);
+        }, 1000);
+
+    } finally {
+
+        button.disabled = false;
+        button.textContent = originalText;
+
+    }
+
+}
+
+
+// ============================================
 // PAGE RELOAD DETECTION
-// --------------------------------------------
+// ============================================
 
 const navigationEntry =
     performance.getEntriesByType("navigation")[0];
@@ -109,12 +219,15 @@ const navigationEntry =
 const isPageReload =
     navigationEntry?.type === "reload";
 
-// --------------------------------------------
+
+// ============================================
 // AUTHENTICATION
-// --------------------------------------------
+// ============================================
 
 const loginForm = $("login-form");
+
 const registerForm = $("register-form");
+
 
 // LOGIN
 
@@ -127,6 +240,7 @@ if (loginForm) {
         hideMessage();
 
         const email = $("login-email")?.value.trim();
+
         const password = $("login-password")?.value;
 
         if (!email || !password) {
@@ -159,6 +273,7 @@ if (loginForm) {
 
 }
 
+
 // REGISTER
 
 if (registerForm) {
@@ -170,7 +285,9 @@ if (registerForm) {
         hideMessage();
 
         const name = $("register-name")?.value.trim();
+
         const email = $("register-email")?.value.trim();
+
         const password = $("register-password")?.value;
 
         if (!name || name.length < 2) {
@@ -216,8 +333,11 @@ if (registerForm) {
                 method: "POST",
 
                 headers: {
+
                     "Content-Type": "application/json",
+
                     Authorization: `Bearer ${token}`
+
                 },
 
                 body: JSON.stringify({ name })
@@ -244,11 +364,13 @@ if (registerForm) {
 
 }
 
-// --------------------------------------------
+
+// ============================================
 // LOGIN / REGISTER SWITCHING
-// --------------------------------------------
+// ============================================
 
 const showRegister = $("show-register");
+
 const showLogin = $("show-login");
 
 if (showRegister) {
@@ -291,9 +413,10 @@ if (showLogin) {
 
 }
 
-// --------------------------------------------
-// LOGOUT SYSTEM
-// --------------------------------------------
+
+// ============================================
+// LOGOUT
+// ============================================
 
 document.addEventListener("click", async (event) => {
 
@@ -325,9 +448,10 @@ document.addEventListener("click", async (event) => {
 
 });
 
-// --------------------------------------------
-// AUTH STATE AND PAGE PROTECTION
-// --------------------------------------------
+
+// ============================================
+// AUTH STATE
+// ============================================
 
 onAuthStateChanged(auth, async (user) => {
 
@@ -338,8 +462,6 @@ onAuthStateChanged(auth, async (user) => {
         "/analyze",
         "/admin"
     ];
-
-    // ADMIN REFRESH LOGOUT
 
     if (
         user &&
@@ -354,10 +476,7 @@ onAuthStateChanged(auth, async (user) => {
 
         } catch (error) {
 
-            console.error(
-                "Admin refresh logout error:",
-                error
-            );
+            console.error(error);
 
         }
 
@@ -365,8 +484,6 @@ onAuthStateChanged(auth, async (user) => {
 
         return;
     }
-
-    // USER NOT LOGGED IN
 
     if (!user) {
 
@@ -379,13 +496,14 @@ onAuthStateChanged(auth, async (user) => {
         return;
     }
 
-    // USER LOGGED IN
-
     try {
 
         await apiRequest("/api/sync-user", {
+
             method: "POST",
+
             body: JSON.stringify({})
+
         });
 
         if (currentPath === "/auth") {
@@ -427,9 +545,10 @@ onAuthStateChanged(auth, async (user) => {
 
 });
 
-// --------------------------------------------
+
+// ============================================
 // DASHBOARD
-// --------------------------------------------
+// ============================================
 
 async function loadDashboard() {
 
@@ -449,9 +568,10 @@ async function loadDashboard() {
 
 }
 
-// --------------------------------------------
+
+// ============================================
 // LOAD ADVERTISEMENTS
-// --------------------------------------------
+// ============================================
 
 async function loadAds() {
 
@@ -475,22 +595,11 @@ async function loadAds() {
 
         data.ads.forEach((ad) => {
 
-            const card = createElement(
-                "div",
-                "ad-card"
-            );
+            const card = createElement("div", "ad-card");
 
-            const title = createElement(
-                "h3",
-                "",
-                ad.title
-            );
+            const title = createElement("h3", "", ad.title);
 
-            const text = createElement(
-                "p",
-                "",
-                ad.text
-            );
+            const text = createElement("p", "", ad.text);
 
             card.append(title, text);
 
@@ -503,7 +612,9 @@ async function loadAds() {
                 );
 
                 link.href = ad.url;
+
                 link.target = "_blank";
+
                 link.rel = "noopener noreferrer";
 
                 card.appendChild(link);
@@ -522,9 +633,10 @@ async function loadAds() {
 
 }
 
-// --------------------------------------------
+
+// ============================================
 // ANALYSIS HISTORY
-// --------------------------------------------
+// ============================================
 
 async function loadHistory() {
 
@@ -558,13 +670,19 @@ async function loadHistory() {
                 createElement(
                     "strong",
                     "",
-                    item.filename
+                    item.filename || "Unknown file"
                 ),
 
                 createElement(
                     "p",
                     "",
-                    `SHA-256: ${item.sha256}`
+                    `Analysis: ${item.analysis_type || "File Analysis"}`
+                ),
+
+                createElement(
+                    "p",
+                    "",
+                    `Case ID: ${item.case_id || "N/A"}`
                 ),
 
                 createElement(
@@ -587,9 +705,348 @@ async function loadHistory() {
 
 }
 
-// --------------------------------------------
+
+// ============================================
+// FORENSIC RESULT DISPLAY HELPERS
+// ============================================
+
+function addReportHeading(container, title) {
+
+    container.appendChild(
+        createElement("h3", "forensic-section-title", title)
+    );
+
+}
+
+function addReportField(container, label, value) {
+
+    const row = createElement("div", "forensic-report-row");
+
+    row.appendChild(
+        createElement("strong", "", `${label}: `)
+    );
+
+    row.appendChild(
+        createElement(
+            "span",
+            "",
+            value === null || value === undefined || value === ""
+                ? "Not Available"
+                : String(value)
+        )
+    );
+
+    container.appendChild(row);
+
+}
+
+function displayForensicReport(data, container) {
+
+    container.replaceChildren();
+
+    addReportHeading(
+        container,
+        "FORENSIC EXAMINATION COMPLETED"
+    );
+
+    // CASE INFORMATION
+
+    addReportHeading(
+        container,
+        "1. CASE INFORMATION"
+    );
+
+    addReportField(container, "Case ID", data.case_id);
+
+    addReportField(container, "Evidence ID", data.evidence_id);
+
+    addReportField(
+        container,
+        "Analysis Type",
+        data.analysis_type
+    );
+
+    // FILE INFORMATION
+
+    addReportHeading(
+        container,
+        "2. FILE IDENTIFICATION"
+    );
+
+    addReportField(
+        container,
+        "Filename",
+        data.filename
+    );
+
+    addReportField(
+        container,
+        "File Size",
+        formatBytes(data.size)
+    );
+
+    addReportField(
+        container,
+        "SHA-256",
+        data.sha256
+    );
+
+    addReportField(
+        container,
+        "SHA-1",
+        data.sha1
+    );
+
+    addReportField(
+        container,
+        "MD5",
+        data.md5
+    );
+
+    // IMAGE ANALYSIS
+
+    if (data.is_image && data.image_analysis) {
+
+        addReportHeading(
+            container,
+            "3. IMAGE TECHNICAL ANALYSIS"
+        );
+
+        const image = data.image_analysis;
+
+        addReportField(container, "Format", image.format);
+
+        addReportField(container, "Width", image.width);
+
+        addReportField(container, "Height", image.height);
+
+        addReportField(container, "Resolution", image.resolution);
+
+        addReportField(container, "Color Mode", image.color_mode);
+
+        addReportField(
+            container,
+            "Compression",
+            image.compression
+        );
+
+        addReportField(
+            container,
+            "EXIF Present",
+            image.exif_present ? "Yes" : "No"
+        );
+
+        addReportField(
+            container,
+            "Metadata Fields",
+            image.metadata_fields
+        );
+
+        // EXIF METADATA
+
+        addReportHeading(
+            container,
+            "4. EXIF METADATA"
+        );
+
+        const exif = data.exif_metadata || {};
+
+        if (Object.keys(exif).length > 0) {
+
+            Object.entries(exif).forEach(([key, value]) => {
+
+                addReportField(
+                    container,
+                    key,
+                    typeof value === "object"
+                        ? JSON.stringify(value)
+                        : value
+                );
+
+            });
+
+        } else {
+
+            addReportField(
+                container,
+                "EXIF",
+                "No standard EXIF metadata detected."
+            );
+
+        }
+
+        // GPS
+
+        addReportHeading(
+            container,
+            "5. GPS INFORMATION"
+        );
+
+        const gps = data.gps_metadata;
+
+        if (
+            gps &&
+            gps.available &&
+            gps.latitude !== undefined
+        ) {
+
+            addReportField(
+                container,
+                "Latitude",
+                gps.latitude
+            );
+
+            addReportField(
+                container,
+                "Longitude",
+                gps.longitude
+            );
+
+        } else {
+
+            addReportField(
+                container,
+                "GPS",
+                "No interpretable GPS coordinates detected."
+            );
+
+        }
+
+    }
+
+    // FINDINGS
+
+    addReportHeading(
+        container,
+        "6. FORENSIC FINDINGS"
+    );
+
+    if (data.findings && data.findings.length > 0) {
+
+        data.findings.forEach((finding) => {
+
+            const card = createElement(
+                "div",
+                "forensic-finding"
+            );
+
+            card.appendChild(
+                createElement(
+                    "strong",
+                    "",
+                    finding.title || "Finding"
+                )
+            );
+
+            card.appendChild(
+                createElement(
+                    "p",
+                    "",
+                    finding.description || ""
+                )
+            );
+
+            card.appendChild(
+                createElement(
+                    "small",
+                    "",
+                    `Severity: ${finding.severity || "Information"}`
+                )
+            );
+
+            container.appendChild(card);
+
+        });
+
+    } else {
+
+        addReportField(
+            container,
+            "Findings",
+            "No additional findings recorded."
+        );
+
+    }
+
+    // WARNINGS
+
+    addReportHeading(
+        container,
+        "7. EXAMINATION WARNINGS"
+    );
+
+    if (data.warnings && data.warnings.length > 0) {
+
+        data.warnings.forEach((warning) => {
+
+            container.appendChild(
+                createElement("p", "forensic-warning", warning)
+            );
+
+        });
+
+    }
+
+    // CONCLUSION
+
+    addReportHeading(
+        container,
+        "8. EXAMINER'S CONCLUSION"
+    );
+
+    container.appendChild(
+        createElement(
+            "p",
+            "forensic-conclusion",
+            data.conclusion || "No conclusion available."
+        )
+    );
+
+    // PDF DOWNLOAD
+
+    const reportButton = createElement(
+        "button",
+        "btn btn-primary",
+        "Download Full PDF Report"
+    );
+
+    reportButton.type = "button";
+
+    reportButton.addEventListener("click", async () => {
+
+        try {
+
+            await downloadForensicReport(
+                data.report_url,
+                reportButton
+            );
+
+        } catch (error) {
+
+            alert(error.message);
+
+        }
+
+    });
+
+    container.appendChild(reportButton);
+
+    // FINAL NOTICE
+
+    container.appendChild(
+        createElement(
+            "p",
+            "forensic-notice",
+            "This automated examination does not independently prove file authenticity."
+        )
+    );
+
+}
+
+
+// ============================================
 // FILE ANALYSIS
-// --------------------------------------------
+// ============================================
 
 const analysisForm = $("analysis-form");
 
@@ -600,6 +1057,7 @@ if (analysisForm) {
         event.preventDefault();
 
         const fileInput = $("analysis-file");
+
         const resultBox = $("analysis-result");
 
         const submitButton = analysisForm.querySelector(
@@ -615,9 +1073,9 @@ if (analysisForm) {
 
         const file = fileInput.files[0];
 
-        // MAXIMUM FILE SIZE: 100 MB
+        const maxSize = 100 * 1024 * 1024;
 
-        if (file.size > 100 * 1024 * 1024) {
+        if (file.size > maxSize) {
 
             resultBox.style.display = "block";
 
@@ -639,7 +1097,7 @@ if (analysisForm) {
             createElement(
                 "h3",
                 "",
-                "Processing Evidence..."
+                "FORENSIC ANALYSIS IN PROGRESS"
             )
         );
 
@@ -647,7 +1105,7 @@ if (analysisForm) {
             createElement(
                 "p",
                 "",
-                "Please wait while the file is being analyzed."
+                "Examining evidence and generating forensic findings..."
             )
         );
 
@@ -665,42 +1123,9 @@ if (analysisForm) {
                 }
             );
 
-            resultBox.replaceChildren();
-
-            resultBox.appendChild(
-                createElement(
-                    "h3",
-                    "",
-                    "Analysis Completed"
-                )
-            );
-
-            const details = [
-
-                `Filename: ${data.filename}`,
-
-                `File size: ${data.size} bytes`,
-
-                `SHA-256: ${data.sha256}`,
-
-                `Analysis: ${data.message}`
-
-            ];
-
-            details.forEach((detail) => {
-
-                resultBox.appendChild(
-                    createElement("p", "", detail)
-                );
-
-            });
-
-            resultBox.appendChild(
-                createElement(
-                    "small",
-                    "",
-                    "SHA-256 calculates a digital fingerprint. It does not prove authenticity."
-                )
+            displayForensicReport(
+                data,
+                resultBox
             );
 
             await loadHistory();
@@ -713,7 +1138,7 @@ if (analysisForm) {
                 createElement(
                     "h3",
                     "",
-                    "Analysis Failed"
+                    "ANALYSIS FAILED"
                 )
             );
 
@@ -737,9 +1162,10 @@ if (analysisForm) {
 
 }
 
-// --------------------------------------------
+
+// ============================================
 // ADMIN PANEL
-// --------------------------------------------
+// ============================================
 
 async function loadAdminPanel() {
 
@@ -770,9 +1196,10 @@ async function loadAdminPanel() {
 
 }
 
-// --------------------------------------------
+
+// ============================================
 // ADMIN STATISTICS
-// --------------------------------------------
+// ============================================
 
 async function loadAdminStats() {
 
@@ -810,9 +1237,10 @@ async function loadAdminStats() {
 
 }
 
-// --------------------------------------------
+
+// ============================================
 // ADMIN USERS
-// --------------------------------------------
+// ============================================
 
 async function loadAdminUsers() {
 
@@ -868,7 +1296,6 @@ async function loadAdminUsers() {
                     `Are you sure you want to ${action} this user?`
                 )
             ) {
-
                 return;
             }
 
@@ -906,9 +1333,10 @@ async function loadAdminUsers() {
 
 }
 
-// --------------------------------------------
+
+// ============================================
 // CREATE ADVERTISEMENT
-// --------------------------------------------
+// ============================================
 
 const adForm = $("ad-form");
 
@@ -964,9 +1392,10 @@ if (adForm) {
 
 }
 
-// --------------------------------------------
+
+// ============================================
 // LOAD ADMIN ADVERTISEMENTS
-// --------------------------------------------
+// ============================================
 
 async function loadAdminAds() {
 
@@ -1005,8 +1434,6 @@ async function loadAdminAds() {
             ad.active ? "Active" : "Inactive"
         );
 
-        // ACTIVATE / DEACTIVATE
-
         const toggle = createElement(
             "button",
             "action-button",
@@ -1036,8 +1463,6 @@ async function loadAdminAds() {
 
         });
 
-        // DELETE ADVERTISEMENT
-
         const deleteButton = createElement(
             "button",
             "delete-button",
@@ -1047,7 +1472,6 @@ async function loadAdminAds() {
         deleteButton.addEventListener("click", async () => {
 
             if (!confirm("Delete this announcement?")) {
-
                 return;
             }
 
@@ -1085,6 +1509,7 @@ async function loadAdminAds() {
     });
 
 }
+
 
 // ============================================
 // END OF FORENSIC LAB JAVASCRIPT
