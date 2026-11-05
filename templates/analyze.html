@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}FORENSIC LAB | File Analysis{% endblock %}
+
+{% block content %}
+
+<section class="analysis-page">
+
+    <div class="page-heading">
+
+        <span class="badge">DIGITAL FORENSICS</span>
+
+        <h1>File Analysis Center</h1>
+
+        <p>Inspect authorized digital evidence.</p>
+
+    </div>
+
+
+    <div class="analysis-card">
+
+        <div class="upload-icon">📂</div>
+
+        <h2>Upload Evidence File</h2>
+
+        <p>
+            Select a file for SHA-256 fingerprint calculation.
+        </p>
+
+        <form id="analysis-form">
+
+            <input
+                type="file"
+                id="analysis-file"
+                required
+            >
+
+            <button type="submit" class="btn btn-primary full-width">
+                Start Analysis
+            </button>
+
+        </form>
+
+        <small>
+            Maximum file size: 100 MB.
+        </small>
+
+    </div>
+
+
+    <div
+        id="analysis-result"
+        class="analysis-result"
+        style="display:none"
+    >
+
+        <h2>Analysis Results</h2>
+
+    </div>
+
+
+    <div class="notice">
+
+        <strong>Important:</strong>
+
+        <p>
+            SHA-256 calculates a digital fingerprint.
+            It does not prove that a file is genuine,
+            nor does it recover deleted information.
+        </p>
+
+    </div>
+
+</section>
+
+{% endblock %}
