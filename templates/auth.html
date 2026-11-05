@@ -18,19 +18,25 @@
 
         </div>
 
+        <!-- LOGIN AND REGISTER TABS -->
+
         <div class="auth-tabs">
 
             <button
                 type="button"
                 id="show-login"
                 class="active">
+
                 Login
+
             </button>
 
             <button
                 type="button"
                 id="show-register">
+
                 Register
+
             </button>
 
         </div>
@@ -62,14 +68,18 @@
             <button
                 type="submit"
                 class="btn btn-primary full-width">
+
                 Login
+
             </button>
 
         </form>
 
-        <!-- REGISTER FORM -->
+        <!-- REGISTRATION FORM -->
 
-        <form id="register-form" style="display:none">
+        <form
+            id="register-form"
+            style="display:none">
 
             <h2>Create Account</h2>
 
@@ -104,22 +114,31 @@
             <button
                 type="submit"
                 class="btn btn-primary full-width">
+
                 Create Account
+
             </button>
 
-            <p>
+            <p class="auth-switch">
+
                 Already have an account?
+
                 <button
                     type="button"
                     id="show-login-register">
+
                     Login
+
                 </button>
+
             </p>
 
         </form>
 
         <p class="auth-note">
+
             Only upload evidence you own or are authorized to examine.
+
         </p>
 
     </div>
@@ -128,6 +147,7 @@
 
 {% endblock %}
 
+
 {% block scripts %}
 
 <script>
@@ -135,44 +155,76 @@
 document.addEventListener("DOMContentLoaded", function () {
 
     const loginTab = document.getElementById("show-login");
+
     const registerTab = document.getElementById("show-register");
 
     const loginForm = document.getElementById("login-form");
+
     const registerForm = document.getElementById("register-form");
 
     const loginFromRegister = document.getElementById(
         "show-login-register"
     );
 
+
+    // SHOW LOGIN
+
     function showLogin() {
 
         loginForm.style.display = "block";
+
         registerForm.style.display = "none";
 
         loginTab.classList.add("active");
+
         registerTab.classList.remove("active");
 
     }
 
+
+    // SHOW REGISTER
+
     function showRegister() {
 
         loginForm.style.display = "none";
+
         registerForm.style.display = "block";
 
         registerTab.classList.add("active");
+
         loginTab.classList.remove("active");
 
     }
+
+
+    // TAB EVENTS
 
     loginTab.addEventListener("click", showLogin);
 
     registerTab.addEventListener("click", showRegister);
 
+
+    // LOGIN FROM REGISTER FORM
+
     if (loginFromRegister) {
+
         loginFromRegister.addEventListener(
             "click",
             showLogin
         );
+
+    }
+
+
+    // OPEN REGISTER AUTOMATICALLY ON /register
+    // AND /create-account
+
+    const openRegister = {{ open_register|default(false)|tojson }};
+
+    if (openRegister) {
+
+        showRegister();
+
     }
 
 });
