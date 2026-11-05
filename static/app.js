@@ -17,6 +17,9 @@ import {
 
 const $ = (id) => document.getElementById(id);
 
+// ADMIN UID
+const ADMIN_UID = "sNQN4CLKeIhdHUeXbMqfW0gOpg62";
+
 function showMessage(message, type = "info") {
     const box = $("message-box");
 
@@ -93,19 +96,40 @@ function formatDate(timestamp) {
 }
 
 // --------------------------------------------
+// PAGE RELOAD DETECTION
+// --------------------------------------------
+
+const navigationEntry =
+    performance.getEntriesByType("navigation")[0];
+
+const isPageReload =
+    navigationEntry?.type === "reload";
+
+// --------------------------------------------
 // AUTHENTICATION
 // --------------------------------------------
 
 const loginForm = $("login-form");
 const registerForm = $("register-form");
 
+// LOGIN
+
 if (loginForm) {
     loginForm.addEventListener("submit", async (event) => {
         event.preventDefault();
+
         hideMessage();
 
         const email = $("login-email")?.value.trim();
         const password = $("login-password")?.value;
+
+        if (!email || !password) {
+            showMessage(
+                "Enter your email and password.",
+                "error"
+            );
+            return;
+        }
 
         try {
             await signInWithEmailAndPassword(
@@ -122,9 +146,12 @@ if (loginForm) {
     });
 }
 
+// REGISTER
+
 if (registerForm) {
     registerForm.addEventListener("submit", async (event) => {
         event.preventDefault();
+
         hideMessage();
 
         const name = $("register-name")?.value.trim();
@@ -133,6 +160,11 @@ if (registerForm) {
 
         if (!name || name.length < 2) {
             showMessage("Enter a valid name.", "error");
+            return;
+        }
+
+        if (!email) {
+            showMessage("Enter your email.", "error");
             return;
         }
 
@@ -159,10 +191,12 @@ if (registerForm) {
 
             const response = await fetch("/api/sync-user", {
                 method: "POST",
+
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`
                 },
+
                 body: JSON.stringify({ name })
             });
 
@@ -180,7 +214,10 @@ if (registerForm) {
     });
 }
 
-// Login/register form switching
+// --------------------------------------------
+// LOGIN / REGISTER SWITCHING
+// --------------------------------------------
+
 const showRegister = $("show-register");
 const showLogin = $("show-login");
 
@@ -188,8 +225,13 @@ if (showRegister) {
     showRegister.addEventListener("click", (event) => {
         event.preventDefault();
 
-        if (loginForm) loginForm.style.display = "none";
-        if (registerForm) registerForm.style.display = "block";
+        if (loginForm) {
+            loginForm.style.display = "none";
+        }
+
+        if (registerForm) {
+            registerForm.style.display = "block";
+        }
 
         hideMessage();
     });
@@ -199,18 +241,29 @@ if (showLogin) {
     showLogin.addEventListener("click", (event) => {
         event.preventDefault();
 
-        if (registerForm) registerForm.style.display = "none";
-        if (loginForm) loginForm.style.display = "block";
+        if (registerForm) {
+            registerForm.style.display = "none";
+        }
+
+        if (loginForm) {
+            loginForm.style.display = "block";
+        }
 
         hideMessage();
     });
 }
 
+// --------------------------------------------
 // LOGOUT SYSTEM
+// --------------------------------------------
 
 document.addEventListener("click", async (event) => {
 
-    const button = event.target.closest("#logout-btn");
+    const target = event.target;
+
+    if (!(target instanceof Element)) return;
+
+    const button = target.closest("#logout-button");
 
     if (!button) return;
 
@@ -236,6 +289,7 @@ document.addEventListener("click", async (event) => {
 // --------------------------------------------
 
 onAuthStateChanged(auth, async (user) => {
+
     const currentPath = window.location.pathname;
 
     const protectedPages = [
@@ -244,22 +298,60 @@ onAuthStateChanged(auth, async (user) => {
         "/admin"
     ];
 
+    // ----------------------------------------
+    // ADMIN REFRESH LOGOUT
+    // ----------------------------------------
+
+    // Admin pekee anatolewa akifanya Refresh.
+    // Users wengine hawataguswa.
+
+    if (
+        user &&
+        user.uid === ADMIN_UID &&
+        isPageReload
+    ) {
+
+        try {
+            await signOut(auth);
+
+        } catch (error) {
+            console.error(
+                "Admin refresh logout error:",
+                error
+            );
+        }
+
+        window.location.replace("/auth");
+
+        return;
+    }
+
+    // ----------------------------------------
+    // USER NOT LOGGED IN
+    // ----------------------------------------
+
     if (!user) {
+
         if (protectedPages.includes(currentPath)) {
-            window.location.href = "/auth";
+            window.location.replace("/auth");
         }
 
         return;
     }
 
+    // ----------------------------------------
+    // USER LOGGED IN
+    // ----------------------------------------
+
     try {
+
         await apiRequest("/api/sync-user", {
             method: "POST",
             body: JSON.stringify({})
         });
 
         if (currentPath === "/auth") {
-            window.location.href = "/dashboard";
+            window.location.replace("/dashboard");
             return;
         }
 
@@ -272,12 +364,18 @@ onAuthStateChanged(auth, async (user) => {
         }
 
     } catch (error) {
+
         console.error(error);
 
-        if (error.message.toLowerCase().includes("suspended")) {
+        if (
+            error.message.toLowerCase().includes("suspended")
+        ) {
+
             await signOut(auth);
+
             alert("Your account has been suspended.");
-            window.location.href = "/auth";
+
+            window.location.replace("/auth");
         }
     }
 });
@@ -287,19 +385,27 @@ onAuthStateChanged(auth, async (user) => {
 // --------------------------------------------
 
 async function loadDashboard() {
+
     const userName = $("user-name");
 
     if (userName && auth.currentUser) {
+
         userName.textContent =
             auth.currentUser.displayName ||
             auth.currentUser.email;
     }
 
     loadAds();
+
     loadHistory();
 }
 
+// --------------------------------------------
+// LOAD ADVERTISEMENTS
+// --------------------------------------------
+
 async function loadAds() {
+
     const container = $("ads-container");
 
     if (!container) return;
@@ -307,23 +413,45 @@ async function loadAds() {
     container.replaceChildren();
 
     try {
+
         const data = await apiRequest("/api/ads");
 
         if (!data.ads || data.ads.length === 0) {
-            container.textContent = "No announcements available.";
+
+            container.textContent =
+                "No announcements available.";
+
             return;
         }
 
         data.ads.forEach((ad) => {
-            const card = createElement("div", "ad-card");
 
-            const title = createElement("h3", "", ad.title);
-            const text = createElement("p", "", ad.text);
+            const card = createElement(
+                "div",
+                "ad-card"
+            );
+
+            const title = createElement(
+                "h3",
+                "",
+                ad.title
+            );
+
+            const text = createElement(
+                "p",
+                "",
+                ad.text
+            );
 
             card.append(title, text);
 
             if (ad.url) {
-                const link = createElement("a", "", "Learn more");
+
+                const link = createElement(
+                    "a",
+                    "",
+                    "Learn more"
+                );
 
                 link.href = ad.url;
                 link.target = "_blank";
@@ -336,11 +464,17 @@ async function loadAds() {
         });
 
     } catch (error) {
+
         container.textContent = error.message;
     }
 }
 
+// --------------------------------------------
+// ANALYSIS HISTORY
+// --------------------------------------------
+
 async function loadHistory() {
+
     const container = $("history-list");
 
     if (!container) return;
@@ -348,26 +482,49 @@ async function loadHistory() {
     container.replaceChildren();
 
     try {
+
         const data = await apiRequest("/api/history");
 
         if (!data.history || data.history.length === 0) {
-            container.textContent = "No analysis history yet.";
+
+            container.textContent =
+                "No analysis history yet.";
+
             return;
         }
 
         data.history.forEach((item) => {
-            const row = createElement("div", "history-item");
+
+            const row = createElement(
+                "div",
+                "history-item"
+            );
 
             row.append(
-                createElement("strong", "", item.filename),
-                createElement("p", "", `SHA-256: ${item.sha256}`),
-                createElement("small", "", formatDate(item.created_at))
+                createElement(
+                    "strong",
+                    "",
+                    item.filename
+                ),
+
+                createElement(
+                    "p",
+                    "",
+                    `SHA-256: ${item.sha256}`
+                ),
+
+                createElement(
+                    "small",
+                    "",
+                    formatDate(item.created_at)
+                )
             );
 
             container.appendChild(row);
         });
 
     } catch (error) {
+
         container.textContent = error.message;
     }
 }
@@ -379,29 +536,42 @@ async function loadHistory() {
 const analysisForm = $("analysis-form");
 
 if (analysisForm) {
+
     analysisForm.addEventListener("submit", async (event) => {
+
         event.preventDefault();
 
         const fileInput = $("analysis-file");
+
         const resultBox = $("analysis-result");
 
         if (!fileInput || !fileInput.files.length) {
-            showMessage("Select a file first.", "error");
+
+            showMessage(
+                "Select a file first.",
+                "error"
+            );
+
             return;
         }
 
         const file = fileInput.files[0];
 
         const formData = new FormData();
+
         formData.append("file", file);
 
         resultBox.textContent = "Analyzing file...";
 
         try {
-            const data = await apiRequest("/api/analyze", {
-                method: "POST",
-                body: formData
-            });
+
+            const data = await apiRequest(
+                "/api/analyze",
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
 
             resultBox.replaceChildren();
 
@@ -421,6 +591,7 @@ if (analysisForm) {
             resultBox.appendChild(heading);
 
             details.forEach((detail) => {
+
                 resultBox.appendChild(
                     createElement("p", "", detail)
                 );
@@ -437,6 +608,7 @@ if (analysisForm) {
             loadHistory();
 
         } catch (error) {
+
             resultBox.textContent = error.message;
         }
     });
@@ -447,56 +619,84 @@ if (analysisForm) {
 // --------------------------------------------
 
 async function loadAdminPanel() {
+
     try {
+
         await loadAdminStats();
+
         await loadAdminUsers();
+
         await loadAdminAds();
 
     } catch (error) {
+
         console.error(error);
 
         if (
             error.message.includes("Admin") ||
             error.message.includes("administrator")
         ) {
+
             alert("Administrator access required.");
-            window.location.href = "/dashboard";
+
+            window.location.replace("/dashboard");
         }
     }
 }
 
+// --------------------------------------------
+// ADMIN STATISTICS
+// --------------------------------------------
+
 async function loadAdminStats() {
-    const data = await apiRequest("/api/admin/stats");
+
+    const data = await apiRequest(
+        "/api/admin/stats"
+    );
 
     if ($("total-users")) {
-        $("total-users").textContent = data.total_users;
+        $("total-users").textContent =
+            data.total_users;
     }
 
     if ($("online-users")) {
-        $("online-users").textContent = data.online_users;
+        $("online-users").textContent =
+            data.online_users;
     }
 
     if ($("weekly-users")) {
-        $("weekly-users").textContent = data.weekly_users;
+        $("weekly-users").textContent =
+            data.weekly_users;
     }
 
     if ($("active-ads")) {
-        $("active-ads").textContent = data.active_ads;
+        $("active-ads").textContent =
+            data.active_ads;
     }
 }
 
-// Users
+// --------------------------------------------
+// ADMIN USERS
+// --------------------------------------------
+
 async function loadAdminUsers() {
+
     const container = $("admin-users");
 
     if (!container) return;
 
     container.replaceChildren();
 
-    const data = await apiRequest("/api/admin/users");
+    const data = await apiRequest(
+        "/api/admin/users"
+    );
 
     data.users.forEach((user) => {
-        const card = createElement("div", "admin-user-card");
+
+        const card = createElement(
+            "div",
+            "admin-user-card"
+        );
 
         const name = createElement(
             "h4",
@@ -504,7 +704,12 @@ async function loadAdminUsers() {
             user.name || user.email || user.uid
         );
 
-        const email = createElement("p", "", user.email || "");
+        const email = createElement(
+            "p",
+            "",
+            user.email || ""
+        );
+
         const status = createElement(
             "p",
             "",
@@ -518,82 +723,145 @@ async function loadAdminUsers() {
         );
 
         button.addEventListener("click", async () => {
-            const action = user.suspended ? "activate" : "suspend";
 
-            if (!confirm(`Are you sure you want to ${action} this user?`)) {
+            const action = user.suspended
+                ? "activate"
+                : "suspend";
+
+            if (
+                !confirm(
+                    `Are you sure you want to ${action} this user?`
+                )
+            ) {
                 return;
             }
 
             try {
+
                 await apiRequest(
                     `/api/admin/user/${encodeURIComponent(user.uid)}/${action}`,
-                    { method: "POST" }
+                    {
+                        method: "POST"
+                    }
                 );
 
-                loadAdminUsers();
-                loadAdminStats();
+                await loadAdminUsers();
+
+                await loadAdminStats();
 
             } catch (error) {
+
                 alert(error.message);
             }
         });
 
-        card.append(name, email, status, button);
+        card.append(
+            name,
+            email,
+            status,
+            button
+        );
+
         container.appendChild(card);
     });
 }
 
-// Create advertisement
+// --------------------------------------------
+// CREATE ADVERTISEMENT
+// --------------------------------------------
+
 const adForm = $("ad-form");
 
 if (adForm) {
+
     adForm.addEventListener("submit", async (event) => {
+
         event.preventDefault();
 
         const title = $("ad-title")?.value.trim();
+
         const text = $("ad-text")?.value.trim();
+
         const url = $("ad-url")?.value.trim();
 
         try {
-            await apiRequest("/api/admin/ads", {
-                method: "POST",
-                body: JSON.stringify({ title, text, url })
-            });
+
+            await apiRequest(
+                "/api/admin/ads",
+                {
+                    method: "POST",
+
+                    body: JSON.stringify({
+                        title,
+                        text,
+                        url
+                    })
+                }
+            );
 
             adForm.reset();
 
-            showMessage("Announcement created successfully.", "success");
+            showMessage(
+                "Announcement created successfully.",
+                "success"
+            );
 
             loadAdminAds();
+
             loadAdminStats();
 
         } catch (error) {
-            showMessage(error.message, "error");
+
+            showMessage(
+                error.message,
+                "error"
+            );
         }
     });
 }
 
-// Load advertisements
+// --------------------------------------------
+// LOAD ADMIN ADVERTISEMENTS
+// --------------------------------------------
+
 async function loadAdminAds() {
+
     const container = $("admin-ads");
 
     if (!container) return;
 
     container.replaceChildren();
 
-    const data = await apiRequest("/api/admin/ads");
+    const data = await apiRequest(
+        "/api/admin/ads"
+    );
 
     data.ads.forEach((ad) => {
-        const card = createElement("div", "admin-ad-card");
 
-        const title = createElement("h4", "", ad.title);
-        const text = createElement("p", "", ad.text);
+        const card = createElement(
+            "div",
+            "admin-ad-card"
+        );
+
+        const title = createElement(
+            "h4",
+            "",
+            ad.title
+        );
+
+        const text = createElement(
+            "p",
+            "",
+            ad.text
+        );
 
         const status = createElement(
             "p",
             "",
             ad.active ? "Active" : "Inactive"
         );
+
+        // ACTIVATE / DEACTIVATE
 
         const toggle = createElement(
             "button",
@@ -602,19 +870,27 @@ async function loadAdminAds() {
         );
 
         toggle.addEventListener("click", async () => {
+
             try {
+
                 await apiRequest(
                     `/api/admin/ads/${encodeURIComponent(ad.id)}/toggle`,
-                    { method: "POST" }
+                    {
+                        method: "POST"
+                    }
                 );
 
-                loadAdminAds();
-                loadAdminStats();
+                await loadAdminAds();
+
+                await loadAdminStats();
 
             } catch (error) {
+
                 alert(error.message);
             }
         });
+
+        // DELETE ADVERTISEMENT
 
         const deleteButton = createElement(
             "button",
@@ -623,18 +899,26 @@ async function loadAdminAds() {
         );
 
         deleteButton.addEventListener("click", async () => {
-            if (!confirm("Delete this announcement?")) return;
+
+            if (!confirm("Delete this announcement?")) {
+                return;
+            }
 
             try {
+
                 await apiRequest(
                     `/api/admin/ads/${encodeURIComponent(ad.id)}/delete`,
-                    { method: "DELETE" }
+                    {
+                        method: "DELETE"
+                    }
                 );
 
-                loadAdminAds();
-                loadAdminStats();
+                await loadAdminAds();
+
+                await loadAdminStats();
 
             } catch (error) {
+
                 alert(error.message);
             }
         });
@@ -649,4 +933,4 @@ async function loadAdminAds() {
 
         container.appendChild(card);
     });
-}
+                    }
