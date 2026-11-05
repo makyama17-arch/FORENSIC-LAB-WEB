@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}FORENSIC LAB | Account{% endblock %}
+
+{% block content %}
+
+<section class="auth-section">
+
+    <div class="auth-card">
+
+        <div class="auth-heading">
+
+            <div class="logo-icon">F</div>
+
+            <h1>Welcome to FORENSIC LAB</h1>
+
+            <p>Access your forensic workspace.</p>
+
+        </div>
+
+
+        <div class="auth-tabs">
+
+            <button id="show-login" class="active">
+                Login
+            </button>
+
+            <button id="show-register">
+                Register
+            </button>
+
+        </div>
+
+
+        <form id="login-form">
+
+            <h2>Sign In</h2>
+
+            <label>Email Address</label>
+
+            <input
+                type="email"
+                id="login-email"
+                placeholder="Enter your email"
+                required
+            >
+
+            <label>Password</label>
+
+            <input
+                type="password"
+                id="login-password"
+                placeholder="Enter password"
+                required
+            >
+
+            <button type="submit" class="btn btn-primary full-width">
+                Login
+            </button>
+
+        </form>
+
+
+        <form id="register-form" style="display:none">
+
+            <h2>Create Account</h2>
+
+            <label>Full Name</label>
+
+            <input
+                type="text"
+                id="register-name"
+                placeholder="Your full name"
+                required
+            >
+
+            <label>Email Address</label>
+
+            <input
+                type="email"
+                id="register-email"
+                placeholder="Enter your email"
+                required
+            >
+
+            <label>Password</label>
+
+            <input
+                type="password"
+                id="register-password"
+                placeholder="Minimum 8 characters"
+                minlength="8"
+                required
+            >
+
+            <button type="submit" class="btn btn-primary full-width">
+                Create Account
+            </button>
+
+        </form>
+
+        <p class="auth-note">
+            Only upload evidence you own or are authorized to examine.
+        </p>
+
+    </div>
+
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script>
+
+const loginTab = document.getElementById("show-login");
+const registerTab = document.getElementById("show-register");
+
+const loginForm = document.getElementById("login-form");
+const registerForm = document.getElementById("register-form");
+
+loginTab.addEventListener("click", () => {
+
+    loginForm.style.display = "block";
+    registerForm.style.display = "none";
+
+    loginTab.classList.add("active");
+    registerTab.classList.remove("active");
+
+});
+
+registerTab.addEventListener("click", () => {
+
+    loginForm.style.display = "none";
+    registerForm.style.display = "block";
+
+    registerTab.classList.add("active");
+    loginTab.classList.remove("active");
+
+});
+
+</script>
+
+{% endblock %}
