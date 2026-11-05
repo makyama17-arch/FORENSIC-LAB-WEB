@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: forensic-lab
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    plan: free
+    envVars:
+      - key: SECRET_KEY
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        value: forensic-lab-7e02c
+      - key: ADMIN_UID
+        sync: false
+      - key: MAX_UPLOAD_MB
+        value: "100"
