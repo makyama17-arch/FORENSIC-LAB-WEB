@@ -17,7 +17,6 @@ import {
 
 const $ = (id) => document.getElementById(id);
 
-// ADMIN UID
 const ADMIN_UID = "sNQN4CLKeIhdHUeXbMqfW0gOpg62";
 
 function showMessage(message, type = "info") {
@@ -41,6 +40,7 @@ function hideMessage() {
 }
 
 async function apiRequest(url, options = {}) {
+
     const user = auth.currentUser;
 
     if (!user) {
@@ -69,13 +69,16 @@ async function apiRequest(url, options = {}) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-        throw new Error(data.error || "Request failed.");
+        throw new Error(
+            data.error || `Request failed (${response.status}).`
+        );
     }
 
     return data;
 }
 
 function createElement(tag, className, text) {
+
     const element = document.createElement(tag);
 
     if (className) {
@@ -90,6 +93,7 @@ function createElement(tag, className, text) {
 }
 
 function formatDate(timestamp) {
+
     if (!timestamp) return "N/A";
 
     return new Date(timestamp).toLocaleString();
@@ -115,7 +119,9 @@ const registerForm = $("register-form");
 // LOGIN
 
 if (loginForm) {
+
     loginForm.addEventListener("submit", async (event) => {
+
         event.preventDefault();
 
         hideMessage();
@@ -124,14 +130,17 @@ if (loginForm) {
         const password = $("login-password")?.value;
 
         if (!email || !password) {
+
             showMessage(
                 "Enter your email and password.",
                 "error"
             );
+
             return;
         }
 
         try {
+
             await signInWithEmailAndPassword(
                 auth,
                 email,
@@ -141,15 +150,21 @@ if (loginForm) {
             window.location.href = "/dashboard";
 
         } catch (error) {
+
             showMessage(error.message, "error");
+
         }
+
     });
+
 }
 
 // REGISTER
 
 if (registerForm) {
+
     registerForm.addEventListener("submit", async (event) => {
+
         event.preventDefault();
 
         hideMessage();
@@ -159,24 +174,31 @@ if (registerForm) {
         const password = $("register-password")?.value;
 
         if (!name || name.length < 2) {
+
             showMessage("Enter a valid name.", "error");
+
             return;
         }
 
         if (!email) {
+
             showMessage("Enter your email.", "error");
+
             return;
         }
 
         if (!password || password.length < 6) {
+
             showMessage(
                 "Password must contain at least 6 characters.",
                 "error"
             );
+
             return;
         }
 
         try {
+
             const result = await createUserWithEmailAndPassword(
                 auth,
                 email,
@@ -190,6 +212,7 @@ if (registerForm) {
             const token = await result.user.getIdToken(true);
 
             const response = await fetch("/api/sync-user", {
+
                 method: "POST",
 
                 headers: {
@@ -198,20 +221,27 @@ if (registerForm) {
                 },
 
                 body: JSON.stringify({ name })
+
             });
 
             if (!response.ok) {
+
                 throw new Error(
                     "Account created, but profile synchronization failed."
                 );
+
             }
 
             window.location.href = "/dashboard";
 
         } catch (error) {
+
             showMessage(error.message, "error");
+
         }
+
     });
+
 }
 
 // --------------------------------------------
@@ -222,7 +252,9 @@ const showRegister = $("show-register");
 const showLogin = $("show-login");
 
 if (showRegister) {
+
     showRegister.addEventListener("click", (event) => {
+
         event.preventDefault();
 
         if (loginForm) {
@@ -234,11 +266,15 @@ if (showRegister) {
         }
 
         hideMessage();
+
     });
+
 }
 
 if (showLogin) {
+
     showLogin.addEventListener("click", (event) => {
+
         event.preventDefault();
 
         if (registerForm) {
@@ -250,7 +286,9 @@ if (showLogin) {
         }
 
         hideMessage();
+
     });
+
 }
 
 // --------------------------------------------
@@ -272,6 +310,7 @@ document.addEventListener("click", async (event) => {
     button.disabled = true;
 
     try {
+
         await signOut(auth);
 
         window.location.replace("/auth");
@@ -281,7 +320,9 @@ document.addEventListener("click", async (event) => {
         alert("Logout failed: " + error.message);
 
         button.disabled = false;
+
     }
+
 });
 
 // --------------------------------------------
@@ -298,27 +339,26 @@ onAuthStateChanged(auth, async (user) => {
         "/admin"
     ];
 
-    // ----------------------------------------
     // ADMIN REFRESH LOGOUT
-    // ----------------------------------------
-
-    // Admin pekee anatolewa akifanya Refresh.
-    // Users wengine hawataguswa.
 
     if (
         user &&
         user.uid === ADMIN_UID &&
-        isPageReload
+        isPageReload &&
+        currentPath === "/admin"
     ) {
 
         try {
+
             await signOut(auth);
 
         } catch (error) {
+
             console.error(
                 "Admin refresh logout error:",
                 error
             );
+
         }
 
         window.location.replace("/auth");
@@ -326,22 +366,20 @@ onAuthStateChanged(auth, async (user) => {
         return;
     }
 
-    // ----------------------------------------
     // USER NOT LOGGED IN
-    // ----------------------------------------
 
     if (!user) {
 
         if (protectedPages.includes(currentPath)) {
+
             window.location.replace("/auth");
+
         }
 
         return;
     }
 
-    // ----------------------------------------
     // USER LOGGED IN
-    // ----------------------------------------
 
     try {
 
@@ -351,16 +389,22 @@ onAuthStateChanged(auth, async (user) => {
         });
 
         if (currentPath === "/auth") {
+
             window.location.replace("/dashboard");
+
             return;
         }
 
         if (currentPath === "/dashboard") {
+
             loadDashboard();
+
         }
 
         if (currentPath === "/admin") {
+
             loadAdminPanel();
+
         }
 
     } catch (error) {
@@ -376,8 +420,11 @@ onAuthStateChanged(auth, async (user) => {
             alert("Your account has been suspended.");
 
             window.location.replace("/auth");
+
         }
+
     }
+
 });
 
 // --------------------------------------------
@@ -393,11 +440,13 @@ async function loadDashboard() {
         userName.textContent =
             auth.currentUser.displayName ||
             auth.currentUser.email;
+
     }
 
-    loadAds();
+    await loadAds();
 
-    loadHistory();
+    await loadHistory();
+
 }
 
 // --------------------------------------------
@@ -458,15 +507,19 @@ async function loadAds() {
                 link.rel = "noopener noreferrer";
 
                 card.appendChild(link);
+
             }
 
             container.appendChild(card);
+
         });
 
     } catch (error) {
 
         container.textContent = error.message;
+
     }
+
 }
 
 // --------------------------------------------
@@ -501,6 +554,7 @@ async function loadHistory() {
             );
 
             row.append(
+
                 createElement(
                     "strong",
                     "",
@@ -518,15 +572,19 @@ async function loadHistory() {
                     "",
                     formatDate(item.created_at)
                 )
+
             );
 
             container.appendChild(row);
+
         });
 
     } catch (error) {
 
         container.textContent = error.message;
+
     }
+
 }
 
 // --------------------------------------------
@@ -542,26 +600,60 @@ if (analysisForm) {
         event.preventDefault();
 
         const fileInput = $("analysis-file");
-
         const resultBox = $("analysis-result");
+
+        const submitButton = analysisForm.querySelector(
+            'button[type="submit"]'
+        );
 
         if (!fileInput || !fileInput.files.length) {
 
-            showMessage(
-                "Select a file first.",
-                "error"
-            );
+            alert("Please select a file first.");
 
             return;
         }
 
         const file = fileInput.files[0];
 
+        // MAXIMUM FILE SIZE: 100 MB
+
+        if (file.size > 100 * 1024 * 1024) {
+
+            resultBox.style.display = "block";
+
+            resultBox.textContent =
+                "File exceeds the 100 MB limit.";
+
+            return;
+        }
+
         const formData = new FormData();
 
         formData.append("file", file);
 
-        resultBox.textContent = "Analyzing file...";
+        resultBox.style.display = "block";
+
+        resultBox.replaceChildren();
+
+        resultBox.appendChild(
+            createElement(
+                "h3",
+                "",
+                "Processing Evidence..."
+            )
+        );
+
+        resultBox.appendChild(
+            createElement(
+                "p",
+                "",
+                "Please wait while the file is being analyzed."
+            )
+        );
+
+        submitButton.disabled = true;
+
+        submitButton.textContent = "Analyzing...";
 
         try {
 
@@ -575,43 +667,74 @@ if (analysisForm) {
 
             resultBox.replaceChildren();
 
-            const heading = createElement(
-                "h3",
-                "",
-                "Analysis completed"
+            resultBox.appendChild(
+                createElement(
+                    "h3",
+                    "",
+                    "Analysis Completed"
+                )
             );
 
             const details = [
-                `Filename: ${data.filename}`,
-                `File size: ${data.size} bytes`,
-                `SHA-256: ${data.sha256}`,
-                `Analysis: ${data.message}`
-            ];
 
-            resultBox.appendChild(heading);
+                `Filename: ${data.filename}`,
+
+                `File size: ${data.size} bytes`,
+
+                `SHA-256: ${data.sha256}`,
+
+                `Analysis: ${data.message}`
+
+            ];
 
             details.forEach((detail) => {
 
                 resultBox.appendChild(
                     createElement("p", "", detail)
                 );
+
             });
 
             resultBox.appendChild(
                 createElement(
                     "small",
                     "",
-                    "A matching SHA-256 hash indicates matching file contents. It does not prove authenticity."
+                    "SHA-256 calculates a digital fingerprint. It does not prove authenticity."
                 )
             );
 
-            loadHistory();
+            await loadHistory();
 
         } catch (error) {
 
-            resultBox.textContent = error.message;
+            resultBox.replaceChildren();
+
+            resultBox.appendChild(
+                createElement(
+                    "h3",
+                    "",
+                    "Analysis Failed"
+                )
+            );
+
+            resultBox.appendChild(
+                createElement(
+                    "p",
+                    "",
+                    error.message
+                )
+            );
+
+        } finally {
+
+            submitButton.disabled = false;
+
+            submitButton.textContent = "Start Analysis";
+
         }
+
     });
+
 }
 
 // --------------------------------------------
@@ -640,8 +763,11 @@ async function loadAdminPanel() {
             alert("Administrator access required.");
 
             window.location.replace("/dashboard");
+
         }
+
     }
+
 }
 
 // --------------------------------------------
@@ -655,24 +781,33 @@ async function loadAdminStats() {
     );
 
     if ($("total-users")) {
+
         $("total-users").textContent =
             data.total_users;
+
     }
 
     if ($("online-users")) {
+
         $("online-users").textContent =
             data.online_users;
+
     }
 
     if ($("weekly-users")) {
+
         $("weekly-users").textContent =
             data.weekly_users;
+
     }
 
     if ($("active-ads")) {
+
         $("active-ads").textContent =
             data.active_ads;
+
     }
+
 }
 
 // --------------------------------------------
@@ -733,6 +868,7 @@ async function loadAdminUsers() {
                     `Are you sure you want to ${action} this user?`
                 )
             ) {
+
                 return;
             }
 
@@ -752,7 +888,9 @@ async function loadAdminUsers() {
             } catch (error) {
 
                 alert(error.message);
+
             }
+
         });
 
         card.append(
@@ -763,7 +901,9 @@ async function loadAdminUsers() {
         );
 
         container.appendChild(card);
+
     });
+
 }
 
 // --------------------------------------------
@@ -796,6 +936,7 @@ if (adForm) {
                         text,
                         url
                     })
+
                 }
             );
 
@@ -806,9 +947,9 @@ if (adForm) {
                 "success"
             );
 
-            loadAdminAds();
+            await loadAdminAds();
 
-            loadAdminStats();
+            await loadAdminStats();
 
         } catch (error) {
 
@@ -816,8 +957,11 @@ if (adForm) {
                 error.message,
                 "error"
             );
+
         }
+
     });
+
 }
 
 // --------------------------------------------
@@ -887,7 +1031,9 @@ async function loadAdminAds() {
             } catch (error) {
 
                 alert(error.message);
+
             }
+
         });
 
         // DELETE ADVERTISEMENT
@@ -901,6 +1047,7 @@ async function loadAdminAds() {
         deleteButton.addEventListener("click", async () => {
 
             if (!confirm("Delete this announcement?")) {
+
                 return;
             }
 
@@ -920,7 +1067,9 @@ async function loadAdminAds() {
             } catch (error) {
 
                 alert(error.message);
+
             }
+
         });
 
         card.append(
@@ -932,5 +1081,11 @@ async function loadAdminAds() {
         );
 
         container.appendChild(card);
+
     });
-                    }
+
+}
+
+// ============================================
+// END OF FORENSIC LAB JAVASCRIPT
+// ============================================
