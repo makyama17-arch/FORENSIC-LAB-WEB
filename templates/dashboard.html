@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}FORENSIC LAB | Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="page-heading">
+
+    <span class="badge">USER WORKSPACE</span>
+
+    <h1>Welcome, <span id="user-name">Investigator</span></h1>
+
+    <p>Your digital forensic investigation workspace.</p>
+
+</div>
+
+
+<div class="dashboard-grid">
+
+    <a href="/analyze" class="dashboard-card">
+
+        <span>🔍</span>
+
+        <h3>File Analysis</h3>
+
+        <p>Analyze files and calculate SHA-256 hashes.</p>
+
+    </a>
+
+
+    <div class="dashboard-card">
+
+        <span>🎥</span>
+
+        <h3>Video Forensics</h3>
+
+        <p>Video metadata and frame examination.</p>
+
+        <small>Advanced module in development</small>
+
+    </div>
+
+
+    <div class="dashboard-card">
+
+        <span>🖼️</span>
+
+        <h3>Image Forensics</h3>
+
+        <p>Image metadata and manipulation indicators.</p>
+
+        <small>Advanced module in development</small>
+
+    </div>
+
+
+    <div class="dashboard-card">
+
+        <span>📱</span>
+
+        <h3>Mobile Forensics</h3>
+
+        <p>Authorized mobile evidence examination.</p>
+
+        <small>Advanced module in development</small>
+
+    </div>
+
+</div>
+
+
+<section class="section">
+
+    <h2>Advertisement</h2>
+
+    <div id="ads-container" class="ads-container">
+
+        <p>No advertisements available.</p>
+
+    </div>
+
+</section>
+
+
+<section class="section">
+
+    <h2>Recent Analysis History</h2>
+
+    <div id="history-list" class="history-list">
+
+        <p>No analysis records found.</p>
+
+    </div>
+
+</section>
+
+{% endblock %}
