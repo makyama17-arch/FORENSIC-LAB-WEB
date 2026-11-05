@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}FORENSIC LAB | Admin Portal{% endblock %}
+
+{% block content %}
+
+<section class="admin-page">
+
+    <div class="page-heading">
+
+        <span class="badge">ADMINISTRATION</span>
+
+        <h1>Admin Control Center</h1>
+
+        <p>Manage users and platform activities.</p>
+
+    </div>
+
+
+    <div class="stats-grid">
+
+        <div class="stat-card">
+            <span>Total Users</span>
+            <h2 id="total-users">0</h2>
+        </div>
+
+        <div class="stat-card">
+            <span>Online Now</span>
+            <h2 id="online-users">0</h2>
+        </div>
+
+        <div class="stat-card">
+            <span>New Users (7 Days)</span>
+            <h2 id="weekly-users">0</h2>
+        </div>
+
+        <div class="stat-card">
+            <span>Active Advertisements</span>
+            <h2 id="active-ads">0</h2>
+        </div>
+
+    </div>
+
+
+    <section class="section">
+
+        <h2>User Management</h2>
+
+        <div id="admin-users" class="admin-users">
+
+            <p>Loading users...</p>
+
+        </div>
+
+    </section>
+
+
+    <section class="section">
+
+        <h2>Advertisement Management</h2>
+
+        <form id="ad-form">
+
+            <input
+                type="text"
+                id="ad-title"
+                placeholder="Advertisement title"
+                required
+            >
+
+            <textarea
+                id="ad-text"
+                placeholder="Advertisement description"
+                required
+            ></textarea>
+
+            <input
+                type="url"
+                id="ad-url"
+                placeholder="https://example.com"
+            >
+
+            <button type="submit" class="btn btn-primary">
+                Add Advertisement
+            </button>
+
+        </form>
+
+        <div id="admin-ads"></div>
+
+    </section>
+
+</section>
+
+{% endblock %}
