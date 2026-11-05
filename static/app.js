@@ -206,19 +206,30 @@ if (showLogin) {
     });
 }
 
-// Logout
-const logoutButton = $("logout-btn");
+// LOGOUT SYSTEM
 
-if (logoutButton) {
-    logoutButton.addEventListener("click", async () => {
-        try {
-            await signOut(auth);
-            window.location.href = "/";
-        } catch (error) {
-            showMessage(error.message, "error");
-        }
-    });
-}
+document.addEventListener("click", async (event) => {
+
+    const button = event.target.closest("#logout-btn");
+
+    if (!button) return;
+
+    event.preventDefault();
+
+    button.disabled = true;
+
+    try {
+        await signOut(auth);
+
+        window.location.replace("/auth");
+
+    } catch (error) {
+
+        alert("Logout failed: " + error.message);
+
+        button.disabled = false;
+    }
+});
 
 // --------------------------------------------
 // AUTH STATE AND PAGE PROTECTION
