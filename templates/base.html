@@ -1,16 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>{% block title %}FORENSIC LAB{% endblock %}</title>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    <meta name="description"
-          content="FORENSIC LAB - Digital investigation and forensic analysis platform">
+    <title>
+        {% block title %}FORENSIC LAB{% endblock %}
+    </title>
 
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='style.css') }}">
+    <meta
+        name="description"
+        content="FORENSIC LAB - Digital investigation and forensic analysis platform"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
 </head>
 
 <body>
@@ -23,10 +34,23 @@
     </a>
 
     <nav class="nav-links">
-        <a href="/" data-translate="home">Home</a>
-        <a href="/dashboard" data-translate="dashboard">Dashboard</a>
-        <a href="/analyze" data-translate="analyze">Analyze</a>
-        <a href="/admin">Admin</a>
+
+        <a href="/" data-translate="home">
+            Home
+        </a>
+
+        <a href="/dashboard" data-translate="dashboard">
+            Dashboard
+        </a>
+
+        <a href="/analyze" data-translate="analyze">
+            Analyze
+        </a>
+
+        <a href="/admin">
+            Admin
+        </a>
+
     </nav>
 
     <div class="nav-actions">
@@ -36,7 +60,11 @@
             <option value="sw">Kiswahili</option>
         </select>
 
-        <button id="logout-button" class="btn btn-outline">
+        <button
+            id="logout-button"
+            type="button"
+            class="btn btn-outline"
+        >
             Logout
         </button>
 
@@ -52,7 +80,9 @@
 
 <footer class="footer">
 
-    <p>© 2026 FORENSIC LAB. All rights reserved.</p>
+    <p>
+        © 2026 FORENSIC LAB. All rights reserved.
+    </p>
 
     <p>
         Responsible digital investigation platform.
@@ -60,11 +90,16 @@
 
 </footer>
 
-<div id="message-box" class="message" style="display:none"></div>
+<div
+    id="message-box"
+    class="message"
+    style="display:none"
+></div>
 
-<script type="module"
-        src="{{ url_for('static', filename='app.js') }}">
-</script>
+<script
+    type="module"
+    src="{{ url_for('static', filename='app.js') }}"
+></script>
 
 {% block scripts %}{% endblock %}
 
